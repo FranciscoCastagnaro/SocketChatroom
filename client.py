@@ -11,16 +11,19 @@ nickname = input("Insert your nickname: ")
 socket.send(nickname.encode("utf-8"))
 
 def hear():
-    while True:
-        msg = socket.recv(1024).decode("utf-8")
-        print(msg)
+    try:
+        while True:
+            msg = socket.recv(1024).decode("utf-8")
+            print(msg)
+    except:
+        print("Connection with server closed")
 
 def talk():
     while True:
         msg = input()
         socket.send(msg.encode("utf-8"))
 
-threading.Thread(target=hear).start()
+threading.Thread(target=hear, daemon=True).start()
 talk()
 
 

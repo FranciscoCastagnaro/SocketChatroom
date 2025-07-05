@@ -9,29 +9,52 @@ PORT = 9898
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))
 
-broadcast_list = []
-address_nickname = {}
+clients = []
+nicknames = []
 
-def handle_user(socket_con, address):
+def handle_user(client):
     while True:
-        msg = socket_con.recv(1024).decode("utf-8")
-        formatted_msg = f"{address_nickname[address]}: {msg}"
-        print(formatted_msg)
-        broadcast(formatted_msg)
+        client_index = clients.index(client)
+        client_nickname = nicknames[client_index]
+        try:
+            msg = client.recv(1024).decode("utf-8")
+            formatted_msg = f"{client_nickname}: {msg}"
+            print(formatted_msg)
+            broadcast(formatted_msg)
+        except:
+            broadcast(f"{client} left the chat")
+            nicknames.pop(client_index)
+            clients.remove(client)
+            client.close()
+
+
 
 def broadcast(msg):
-    for sock in broadcast_list:
-        sock.send(msg.encode("utf-8"))
+    for client in clients:
+        client.send(msg.encode("utf-8"))
 
-server.listen(5)
-print(f"Server listening on {HOST}:{PORT}")
-while True:
 
-    current_connection_socket, address = server.accept()
-    address_nickname[address] = current_connection_socket.recv(1024).decode("utf-8")
-    broadcast_list.append(current_connection_socket)
-    print(f"{address_nickname[address]} {address} connected to the chat")
-    broadcast(f"{address_nickname[address]} {address} connected to the chat")
-    
-    thread = threading.Thread(target=handle_user, daemon=True, args=[current_connection_socket, address])
-    thread.start()
+
+def listen():
+
+    # listen to (up to 5) connections
+    server.listen(5)
+    print(f"Server listening on {HOST}:{PORT}")
+    while True:
+
+        # accept new connection
+        current_socket, address = server.accept()
+        client_nickname = current_socket.recv(1024).decode("utf-8")
+
+        # load socket and nick
+        nicknames.append(client_nickname)
+        clients.append(current_socket)
+
+        print(f"{client_nickname} {address} connected to the chat")
+        broadcast(f"{client_nickname} {address} connected to the chat")
+        
+        # set thread to handle client
+        thread = threading.Thread(target=handle_user, daemon=True, args=(current_socket,))
+        thread.start()
+
+listen()
